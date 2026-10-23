@@ -1,0 +1,28 @@
+{
+  "name": "wechatbot-edgeone-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "EdgeOne 边缘运行时的微信机器人服务端：多轮会话 + 长期记忆 + DeepSeek + Passkey 配置中心",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node tools/smoke.mjs && node tools/http-smoke.mjs",
+    "test:unit": "node tools/smoke.mjs",
+    "test:http": "node tools/http-smoke.mjs",
+    "verify": "node tools/verify-modules.mjs",
+    "docs:config": "node tools/gen-config-docs.mjs > docs/CONFIG.md"
+  },
+  "keywords": [
+    "edgeone",
+    "pages-functions",
+    "wechatbot",
+    "ilink",
+    "deepseek",
+    "webauthn",
+    "passkey",
+    "multi-turn-memory"
+  ],
+  "license": "MIT"
+}

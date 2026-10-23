@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>微信机器人 · 服务端配置中心</title>
+<link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">WB</span>
+      <div>
+        <h1>微信机器人配置中心</h1>
+        <p class="sub" id="envLine">EdgeOne Edge Runtime · DeepSeek · iLink</p>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <span id="healthBadge" class="badge">检测中…</span>
+      <button id="btnLogout" class="btn ghost" hidden>退出登录</button>
+    </div>
+  </header>
+
+  <!-- ── 步骤 1：入口选择 ─────────────────────────────────────────── -->
+  <section id="viewGate" class="card gate">
+    <div class="gate-grid">
+      <div class="gate-col">
+        <h2>① 进入配置</h2>
+        <p class="muted">首次配置必须通过云函数签发的临时安全链接进入。链接一次性使用，完成密钥设置后立即失效。</p>
+        <label class="field">
+          <span>临时安全链接 Token</span>
+          <input id="linkToken" type="text" placeholder="粘贴 link= 后面的值，或直接访问带 ?link= 的地址" />
+        </label>
+        <button id="btnUseLink" class="btn primary block">使用安全链接进入</button>
+        <p class="hint">没有链接？在服务端执行：<code>curl -X POST /api/admin -d '{"op":"secure-link"}' -H "X-Admin-Master-Key: ..."</code></p>
+      </div>
+      <div class="gate-divider"><span>或</span></div>
+      <div class="gate-col">
+        <h2>② Passkey 登录</h2>
+        <p class="muted">已完成配置的设备可直接用已注册的密钥免密码登录。</p>
+        <button id="btnPasskeyLogin" class="btn primary block">使用 Passkey 登录</button>
+        <ul class="passkey-hint">
+          <li>支持在同一账号下注册多个密钥（手机、电脑、硬件钥匙）</li>
+          <li>登录密钥永不离开设备，服务端只保存公钥</li>
+        </ul>
+      </div>
+    </div>
+    <div id="gateAlert" class="alert" hidden></div>
+  </section>
+
+  <!-- ── 步骤 2：注册密钥 ───────────────────────────────────────────── -->
+  <section id="viewSetup" class="card" hidden>
+    <h2>设置 Passkey</h2>
+    <p class="muted">点击下方按钮，系统将弹出本机的生物识别 / PIN 验证。验证通过后该密钥立即写入服务端，<strong>本次安全链接随即失效</strong>。</p>
+    <div class="row">
+      <label class="field grow">
+        <span>密钥备注名</span>
+        <input id="setupName" type="text" placeholder="例如：MacBook Touch ID" maxlength="40" />
+      </label>
+    </div>
+    <div class="row">
+      <label class="field">
+        <span>管理员账号名</span>
+        <input id="setupUser" type="text" value="管理员" maxlength="20" />
+      </label>
+    </div>
+    <button id="btnRegister" class="btn primary block">注册密钥并进入</button>
+    <div id="setupAlert" class="alert" hidden></div>
+  </section>
+
+  <!-- ── 步骤 3：配置面板 ───────────────────────────────────────────── -->
+  <section id="viewConsole" hidden>
+    <div class="console">
+      <nav class="sidebar">
+        <div class="side-group" id="navGroups"></div>
+        <div class="side-group">
+          <div class="side-title">密钥管理</div>
+          <button class="side-item" data-tab="keys">已注册密钥</button>
+          <button class="side-item" data-tab="security">安全与时限</button>
+        </div>
+        <div class="side-group">
+          <div class="side-title">运维</div>
+          <button class="side-item" data-tab="wechat-login">微信扫码登录</button>
+          <button class="side-item" data-tab="memory">记忆查看</button>
+          <button class="side-item" data-tab="sessions">会话查看</button>
+          <button class="side-item" data-tab="audit">审计日志</button>
+        </div>
+      </nav>
+
+      <main class="content">
+        <div id="requiredBanner" class="banner" hidden>
+          <strong>还有必填项未完成：</strong><span id="requiredList"></span>
+        </div>
+        <div id="tabConfig">
+          <div id="configGroups"></div>
+          <div class="sticky-actions">
+            <button id="btnSave" class="btn primary">保存配置</button>
+            <button id="btnReveal" class="btn ghost">显示密钥明文</button>
+            <span id="saveState" class="save-state"></span>
+          </div>
+        </div>
+
+        <div id="tabKeys" hidden>
+          <h3>已注册密钥</h3>
+          <table class="table" id="keysTable"><tbody></tbody></table>
+          <div class="row">
+            <button id="btnAddKey" class="btn">添加新密钥</button>
+            <button id="btnResetKeys" class="btn danger-ghost">重置全部密钥</button>
+          </div>
+          <p class="hint">重置后所有已注册密钥与管理端会话立即失效，需要凭主密钥重新签发安全链接。</p>
+        </div>
+
+        <div id="tabSecurity" hidden>
+          <h3>临时安全链接</h3>
+          <p class="muted">为另一台设备签发一次性链接；链接有效期与从哪项凭证签发均可在上方「安全与管理端」分组调整。</p>
+          <div class="row">
+            <label class="field">
+              <span>用途</span>
+              <select id="linkPurpose">
+                <option value="setup">重新配置 / 换设备</option>
+                <option value="add-passkey">仅添加新密钥</option>
+              </select>
+            </label>
+            <button id="btnIssueLink" class="btn">签发安全链接</button>
+          </div>
+          <div id="issuedLink" class="code-block" hidden></div>
+        </div>
+
+        <div id="tabWechatLogin" hidden>
+          <h3>微信扫码登录（获取 iLink Bot Token）</h3>
+          <div class="row">
+            <button id="btnQrcode" class="btn">获取二维码</button>
+            <button id="btnPoll" class="btn" disabled>轮询扫码结果</button>
+          </div>
+          <div id="qrBox" class="qr-box" hidden><img id="qrImg" alt="二维码" /></div>
+          <div id="qrStatus" class="code-block" hidden></div>
+        </div>
+
+        <div id="tabMemory" hidden>
+          <h3>用户长期记忆</h3>
+          <div class="row">
+            <label class="field grow"><span>用户 ID</span><input id="memUser" type="text" placeholder="例如 xxx@im.wechat" /></label>
+            <label class="field grow"><span>检索词（可选）</span><input id="memQuery" type="text" /></label>
+            <button id="btnMemLoad" class="btn">加载</button>
+          </div>
+          <div id="memStats" class="stats" hidden></div>
+          <table class="table" id="memTable"><tbody></tbody></table>
+          <button id="btnMemPurge" class="btn danger-ghost">清空该用户记忆</button>
+        </div>
+
+        <div id="tabSessions" hidden>
+          <h3>会话</h3>
+          <div class="row">
+            <label class="field grow"><span>用户 ID</span><input id="sessUser" type="text" /></label>
+            <button id="btnSessLoad" class="btn">加载</button>
+            <button id="btnSessEnd" class="btn ghost">结束活跃会话</button>
+          </div>
+          <table class="table" id="sessTable"><tbody></tbody></table>
+          <div class="row"><button id="btnSweep" class="btn">立即执行超时回收</button></div>
+          <div id="sweepOut" class="code-block" hidden></div>
+        </div>
+
+        <div id="tabAudit" hidden>
+          <h3>审计日志</h3>
+          <button id="btnAudit" class="btn">刷新</button>
+          <table class="table" id="auditTable"><tbody></tbody></table>
+        </div>
+      </main>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <span>所有配置保存在服务端 KV，修改后立即生效，无需重新部署。</span>
+  </footer>
+</div>
+
+<div id="toast" class="toast" hidden></div>
+<script src="./app.js" type="module"></script>
+</body>
+</html>
