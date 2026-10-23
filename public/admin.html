@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>对话服务 · 配置状态</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --border: #e3e6eb;
+    --text: #1f2329;
+    --text-2: #5f6672;
+    --text-3: #8a919c;
+    --brand: #1664ff;
+    --brand-weak: #eef3ff;
+    --danger: #d92d20;
+    --danger-weak: #fef3f2;
+    --ok: #067647;
+    --ok-weak: #ecfdf3;
+    --warn: #b54708;
+    --warn-weak: #fffaeb;
+    --radius: 10px;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 32px 20px 64px;
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: var(--text-2); margin: 0 0 24px; font-size: 13px; }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .card h2 { font-size: 15px; margin: 0 0 14px; display: flex; align-items: center; gap: 8px; }
+  label { display: block; font-size: 13px; color: var(--text-2); margin-bottom: 6px; }
+  input {
+    width: 100%;
+    padding: 9px 11px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font: inherit;
+    color: var(--text);
+    background: #fff;
+  }
+  input:focus { outline: 2px solid var(--brand-weak); border-color: var(--brand); }
+  .grid { display: grid; gap: 14px; grid-template-columns: 1fr 1fr; }
+  .grid-1 { grid-template-columns: 1fr; }
+  @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
+  .actions { margin-top: 16px; display: flex; gap: 10px; flex-wrap: wrap; }
+  button {
+    font: inherit;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--brand);
+    background: var(--brand);
+    color: #fff;
+    cursor: pointer;
+  }
+  button.ghost { background: #fff; color: var(--text); border-color: var(--border); }
+  button:disabled { opacity: .55; cursor: not-allowed; }
+  .note {
+    font-size: 12px;
+    color: var(--text-3);
+    margin-top: 12px;
+    line-height: 1.65;
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    white-space: nowrap;
+  }
+  .badge-ok { background: var(--ok-weak); color: var(--ok); border-color: #abefc6; }
+  .badge-bad { background: var(--danger-weak); color: var(--danger); border-color: #fecdca; font-weight: 600; }
+  .badge-warn { background: var(--warn-weak); color: var(--warn); border-color: #fedf89; }
+  .check {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .check.missing { border-color: #fda29b; background: var(--danger-weak); }
+  .check-name { font-weight: 600; margin-bottom: 4px; }
+  .check-val { color: var(--text-2); font-size: 13px; word-break: break-all; }
+  .check-val code { font-family: var(--mono); font-size: 12.5px; color: var(--text); }
+  .checks { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+  @media (max-width: 720px) { .checks { grid-template-columns: 1fr; } }
+  .kv { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px dashed var(--border); font-size: 13px; }
+  .kv:last-child { border-bottom: none; }
+  .kv span:first-child { color: var(--text-2); }
+  .kv span:last-child { font-family: var(--mono); font-size: 12.5px; text-align: right; word-break: break-all; }
+  .status-line { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .msg { padding: 10px 12px; border-radius: 8px; font-size: 13px; margin-bottom: 14px; }
+  .msg-err { background: var(--danger-weak); color: var(--danger); border: 1px solid #fecdca; }
+  .msg-ok { background: var(--ok-weak); color: var(--ok); border: 1px solid #abefc6; }
+  .hide { display: none !important; }
+  ul.warn-list { margin: 8px 0 0; padding-left: 18px; color: var(--warn); font-size: 13px; }
+  code.inline { font-family: var(--mono); background: #f2f4f7; padding: 1px 5px; border-radius: 4px; font-size: 12.5px; }
+  .foot { color: var(--text-3); font-size: 12px; text-align: center; margin-top: 24px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>对话服务 · 配置状态</h1>
+  <p class="sub">服务端渲染，仅返回脱敏状态。页面不内联任何密钥，凭据只保存在当前标签页内存中。</p>
+
+  <section class="card" id="login-card">
+    <h2>管理员验证</h2>
+    <div class="grid">
+      <div>
+        <label for="token">管理员 Token（ADMIN_TOKEN）</label>
+        <input id="token" type="password" autocomplete="off" placeholder="Bearer token" />
+      </div>
+      <div>
+        <label for="secret">签名密钥（ADMIN_HMAC_SECRET）</label>
+        <input id="secret" type="password" autocomplete="off" placeholder="HMAC-SHA256 secret" />
+      </div>
+    </div>
+    <div class="actions">
+      <button id="login-btn">验证并读取状态</button>
+    </div>
+    <p class="note">
+      签名算法：<code class="inline">HMAC-SHA256(secret, METHOD \n PATH \n TIMESTAMP \n sha256(body))</code>，
+      请求头带 <code class="inline">Authorization: Bearer &lt;token&gt;</code>、
+      <code class="inline">X-Admin-Timestamp</code>、<code class="inline">X-Admin-Signature</code>。
+      时间戳与服务端偏差超过 5 分钟即视为重放攻击并拒绝。
+    </p>
+  </section>
+
+  <div id="alert" class="msg msg-err hide"></div>
+
+  <section id="result" class="hide">
+    <div class="card">
+      <div class="status-line">
+        <strong>总体状态</strong>
+        <span id="overall-badge" class="badge"></span>
+        <span id="overall-text" class="note" style="margin:0"></span>
+      </div>
+      <h2 style="margin-bottom:12px">必须配置项</h2>
+      <div class="checks" id="checks"></div>
+      <div id="warnings" class="hide">
+        <ul class="warn-list" id="warn-list"></ul>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>运行时参数</h2>
+      <div id="runtime"></div>
+    </div>
+
+    <div class="card">
+      <h2>操作</h2>
+      <div class="actions" style="margin-top:0">
+        <button class="ghost" id="refresh-btn">刷新状态</button>
+        <button class="ghost" id="stats-btn">读取存储统计</button>
+        <button class="ghost" id="sweep-btn">执行维护巡检</button>
+      </div>
+      <p class="note">维护巡检会结算超时会话、补跑记忆提炼、执行容量淘汰与物理清理；在无定时任务的环境里可手动触发。</p>
+      <pre id="op-output" class="note" style="white-space:pre-wrap;font-family:var(--mono);margin-top:12px"></pre>
+    </div>
+  </section>
+
+  <p class="foot">EdgeOne Makers Functions · Blob（consistency: strong）· DeepSeek /chat/completions · iLink context_token</p>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var state = { token: '', secret: '', base: '', loaded: false };
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  function showError(text) {
+    var box = $('alert');
+    box.textContent = text;
+    box.className = 'msg msg-err';
+  }
+
+  function clearError() {
+    $('alert').className = 'msg msg-err hide';
+  }
+
+  function hex(buffer) {
+    return Array.prototype.map.call(new Uint8Array(buffer), function (b) {
+      return b.toString(16).padStart(2, '0');
+    }).join('');
+  }
+
+  function sha256Hex(text) {
+    return crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)).then(hex);
+  }
+
+  function hmacHex(secret, message) {
+    return crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+      .then(function (key) { return crypto.subtle.sign('HMAC', key, new TextEncoder().encode(message)); })
+      .then(hex);
+  }
+
+  // 与服务端 src/auth.js 的 buildSignatureBase 必须逐字符一致
+  function sign(method, path, rawBody) {
+    var ts = String(Date.now());
+    return sha256Hex(rawBody || '').then(function (bodyHash) {
+      var base = method + '\n' + path + '\n' + ts + '\n' + bodyHash;
+      return hmacHex(state.secret, base).then(function (sig) {
+        return {
+          'authorization': 'Bearer ' + state.token,
+          'x-admin-timestamp': ts,
+          'x-admin-signature': sig
+        };
+      });
+    });
+  }
+
+  function adminFetch(path, options) {
+    options = options || {};
+    var method = options.method || 'GET';
+    var raw = options.body ? JSON.stringify(options.body) : '';
+    return sign(method, path, raw).then(function (authHeaders) {
+      var headers = Object.assign({}, authHeaders);
+      if (raw) headers['content-type'] = 'application/json';
+      return fetch(path, { method: method, headers: headers, body: raw || undefined });
+    });
+  }
+
+  function badge(ok, text) {
+    var span = document.createElement('span');
+    span.className = 'badge ' + (ok ? 'badge-ok' : 'badge-bad');
+    span.textContent = text;
+    return span;
+  }
+
+  function renderChecks(checks, requiredMissing) {
+    var host = $('checks');
+    host.innerHTML = '';
+    var order = ['deepseekApiKey', 'blobStoreName', 'systemPrompt', 'sessionTimeoutMs'];
+
+    order.forEach(function (key) {
+      var item = checks[key];
+      if (!item) return;
+      var missing = requiredMissing.indexOf(
+        { deepseekApiKey: 'DEEPSEEK_API_KEY', blobStoreName: 'BLOB_STORE_NAME', systemPrompt: 'SYSTEM_PROMPT', sessionTimeoutMs: 'SESSION_TIMEOUT_MS' }[key]
+      ) !== -1 || item.configured === false;
+
+      var box = document.createElement('div');
+      box.className = 'check' + (missing ? ' missing' : '');
+
+      var left = document.createElement('div');
+      var name = document.createElement('div');
+      name.className = 'check-name';
+      name.textContent = item.label;
+      var value = document.createElement('div');
+      value.className = 'check-val';
+
+      if (key === 'blobStoreName') {
+        value.innerHTML = 'Store：<code>' + escapeHtml(item.value || '—') + '</code> · consistency: <code>' + escapeHtml(item.consistency) + '</code>';
+      } else if (key === 'systemPrompt') {
+        value.innerHTML = escapeHtml(item.display) + (item.hash ? ' · hash <code>' + escapeHtml(item.hash) + '</code>' : '');
+      } else if (key === 'deepseekApiKey') {
+        value.innerHTML = item.configured ? '已配置 <code>' + escapeHtml(item.masked) + '</code>' : '未配置';
+      } else {
+        value.innerHTML = item.configured
+          ? '<code>' + escapeHtml(String(item.value)) + ' ms</code> · ' + escapeHtml(item.humanReadable || '')
+          : '未配置';
+      }
+
+      left.appendChild(name);
+      left.appendChild(value);
+      box.appendChild(left);
+      box.appendChild(missing ? badge(false, '必须配置') : badge(true, '已就绪'));
+      host.appendChild(box);
+    });
+  }
+
+  function escapeHtml(text) {
+    return String(text == null ? '' : text)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function renderRuntime(runtime) {
+    var host = $('runtime');
+    host.innerHTML = '';
+    var rows = [
+      ['DeepSeek 地址', runtime.deepseekBaseUrl],
+      ['模型', runtime.deepseekModel],
+      ['提示词注入模式', runtime.promptInjectionMode],
+      ['历史窗口上限', runtime.historyMaxMessages + ' 条'],
+      ['工具轮次上限', runtime.toolMaxRounds],
+      ['记忆功能', runtime.memory.enabled ? '启用' : '关闭'],
+      ['记忆召回 top-K', runtime.memory.topK],
+      ['记忆容量上限', runtime.memory.maxItems + ' 条'],
+      ['记忆闲置淘汰', runtime.memory.ttlDays + ' 天'],
+      ['权重衰减 λ', runtime.memory.decayLambda],
+      ['去重相似度阈值', runtime.memory.dedupThreshold]
+    ];
+    rows.forEach(function (row) {
+      var div = document.createElement('div');
+      div.className = 'kv';
+      var k = document.createElement('span');
+      k.textContent = row[0];
+      var v = document.createElement('span');
+      v.textContent = String(row[1]);
+      div.appendChild(k);
+      div.appendChild(v);
+      host.appendChild(div);
+    });
+  }
+
+  function renderWarnings(warnings) {
+    var host = $('warnings');
+    var list = $('warn-list');
+    list.innerHTML = '';
+    if (!warnings || warnings.length === 0) {
+      host.className = 'hide';
+      return;
+    }
+    warnings.forEach(function (text) {
+      var li = document.createElement('li');
+      li.textContent = text;
+      list.appendChild(li);
+    });
+    host.className = '';
+  }
+
+  function render(status) {
+    var missing = status.requiredMissing || [];
+    var ok = missing.length === 0 && (status.invalidEntries || []).length === 0;
+
+    var overallBadge = $('overall-badge');
+    overallBadge.className = 'badge ' + (ok ? 'badge-ok' : 'badge-bad');
+    overallBadge.textContent = ok ? '配置完整' : '存在必须配置项';
+    $('overall-text').textContent = ok
+      ? '所有必须配置项已就绪，服务可正常处理对话。'
+      : '缺失：' + missing.join('、') + '。业务接口将返回 503 并拒绝服务。';
+
+    renderChecks(status.checks || {}, missing);
+    renderRuntime(status.runtime || { memory: {} });
+    renderWarnings(status.warnings || []);
+    $('result').className = '';
+    state.loaded = true;
+  }
+
+  function loadStatus(withStats) {
+    clearError();
+    var path = state.base + '/admin/config/status' + (withStats ? '?stats=1' : '');
+    return adminFetch(path).then(function (res) {
+      return res.json().then(function (data) {
+        if (!res.ok) {
+          var detail = data && data.error ? data.error.code : 'HTTP ' + res.status;
+          var extra = data && data.error && data.error.details && data.error.details.requiredMissing
+            ? '（缺失：' + data.error.details.requiredMissing.join('、') + '）'
+            : '';
+          throw new Error(detail + extra);
+        }
+        render(data);
+        return data;
+      });
+    }).catch(function (err) {
+      showError('读取状态失败：' + err.message);
+    });
+  }
+
+  function guessBase() {
+    var path = location.pathname;
+    var idx = path.indexOf('/admin');
+    if (idx > 0) return path.slice(0, idx);
+    return '/api';
+  }
+
+  $('login-btn').addEventListener('click', function () {
+    state.token = $('token').value.trim();
+    state.secret = $('secret').value.trim();
+    state.base = guessBase();
+    if (!state.token || !state.secret) {
+      showError('请填写管理员 Token 与签名密钥。');
+      return;
+    }
+    loadStatus(false);
+  });
+
+  $('refresh-btn').addEventListener('click', function () { loadStatus(false); });
+
+  $('stats-btn').addEventListener('click', function () {
+    loadStatus(true).then(function (data) {
+      if (!data || !data.stats) return;
+      $('op-output').textContent =
+        '会话文件：' + data.stats.sessionFiles + ' 个\n' +
+        '记忆文件：' + data.stats.memoryFiles + ' 个';
+    });
+  });
+
+  $('sweep-btn').addEventListener('click', function () {
+    var btn = $('sweep-btn');
+    btn.disabled = true;
+    $('op-output').textContent = '巡检执行中…';
+    adminFetch(state.base + '/admin/maintenance/sweep', { method: 'POST', body: {} })
+      .then(function (res) { return res.json().then(function (data) { return { res: res, data: data }; }); })
+      .then(function (out) {
+        if (!out.res.ok) throw new Error(out.data && out.data.error ? out.data.error.code : 'HTTP ' + out.res.status);
+        var r = out.data.result;
+        $('op-output').textContent =
+          '巡检完成：扫描用户 ' + r.scannedUsers + ' 个，会话文件 ' + r.sessionKeys + ' 个，记忆文件 ' + r.memoryKeys + ' 个\n' +
+          '结算超时会话：' + JSON.stringify(r.results.map(function (x) { return x.expiredSessions || []; }));
+      })
+      .catch(function (err) { $('op-output').textContent = '巡检失败：' + err.message; })
+      .finally(function () { btn.disabled = false; });
+  });
+
+  if (!window.crypto || !window.crypto.subtle) {
+    showError('当前环境不是安全上下文（HTTPS 或 localhost），WebCrypto 不可用，无法计算签名。');
+  }
+})();
+</script>
+</body>
+</html>

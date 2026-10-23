@@ -1,7 +1,0 @@
-{
-  "name": "wechatbot-edgeone-server",
-  "type": "module",
-  "version": "1.0.0",
-  "private": true,
-  "description": "EdgeOne 边缘运行时的微信机器人服务端：多轮会话 + 长期记忆 + DeepSeek"
-}

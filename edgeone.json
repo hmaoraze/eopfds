@@ -1,0 +1,35 @@
+{
+  "name": "edgeone-makers-chat",
+  "outputDirectory": "./public",
+  "nodeVersion": "20.18.0",
+  "cloudFunctions": {
+    "nodejs": {
+      "maxDuration": 60
+    },
+    "mainlandRegions": ["ap-guangzhou"],
+    "overseasRegions": ["ap-singapore"]
+  },
+  "headers": [
+    {
+      "source": "/admin.html",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" }
+      ]
+    }
+  ],
+  "schedules": [
+    {
+      "name": "chat-maintenance",
+      "cron": "0 * * * *",
+      "path": "/cron/maintenance",
+      "method": "POST",
+      "payload": {
+        "token": "REPLACE_WITH_CRON_SECRET",
+        "maxUsers": 25
+      },
+      "timezone": "Asia/Shanghai"
+    }
+  ]
+}

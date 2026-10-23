@@ -1,28 +1,17 @@
 {
-  "name": "wechatbot-edgeone-server",
+  "name": "edgeone-makers-chat-service",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "EdgeOne 边缘运行时的微信机器人服务端：多轮会话 + 长期记忆 + DeepSeek + Passkey 配置中心",
+  "description": "EdgeOne Makers Functions 对话服务：DeepSeek + Blob 记忆 + iLink 微信协议",
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "scripts": {
-    "test": "node tools/smoke.mjs && node tools/http-smoke.mjs",
-    "test:unit": "node tools/smoke.mjs",
-    "test:http": "node tools/http-smoke.mjs",
-    "verify": "node tools/verify-modules.mjs",
-    "docs:config": "node tools/gen-config-docs.mjs > docs/CONFIG.md"
+    "test": "node --test \"test/**/*.test.mjs\"",
+    "test:spec": "node --test --test-reporter=spec \"test/**/*.test.mjs\""
   },
-  "keywords": [
-    "edgeone",
-    "pages-functions",
-    "wechatbot",
-    "ilink",
-    "deepseek",
-    "webauthn",
-    "passkey",
-    "multi-turn-memory"
-  ],
-  "license": "MIT"
+  "dependencies": {
+    "@edgeone/pages-blob": ">=0.0.14"
+  }
 }
